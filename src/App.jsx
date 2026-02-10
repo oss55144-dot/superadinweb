@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
-import { Play, Pause, Download, Volume2, Mic, Settings, Search, Loader2, AlertCircle, X } from 'lucide-react';
+import { Play, Pause, Download, Volume2, Mic, Settings, Search, Loader2, AlertCircle, X, Terminal } from 'lucide-react';
 import './App.css';
 
 const DEFAULT_VOICE_ID = '6AUOG2nbfr0yFEeI0784'; // Rachel
@@ -15,12 +15,10 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [audioUrl, setAudioUrl] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isDemoMode, setIsDemoMode] = useState(false);
   const audioRef = useRef(null);
 
   const fetchVoices = async (key) => {
     setIsFetchingVoices(true);
-    setIsDemoMode(false);
     try {
       const response = await axios.get('https://api.elevenlabs.io/v1/voices', {
         headers: { 'xi-api-key': key || apiKey }
@@ -33,9 +31,8 @@ function App() {
       }
     } catch (error) {
       console.error("Fetch failed", error);
-      // Fallback to minimal shell if API fails
-      setVoices([{ voice_id: DEFAULT_VOICE_ID, name: 'Rachel' }]);
-      setSelectedVoice({ voice_id: DEFAULT_VOICE_ID, name: 'Rachel' });
+      setVoices([{ voice_id: DEFAULT_VOICE_ID, name: 'Rachel Agent' }]);
+      setSelectedVoice({ voice_id: DEFAULT_VOICE_ID, name: 'Rachel Agent' });
     } finally {
       setIsFetchingVoices(false);
     }
@@ -73,7 +70,7 @@ function App() {
       );
       setAudioUrl(URL.createObjectURL(response.data));
     } catch (error) {
-      alert('Generation failed. Check your API key/credits.');
+      alert('Neural link failed. Check API key/credits.');
     } finally {
       setIsLoading(false);
     }
@@ -83,17 +80,17 @@ function App() {
     <div className="app-container">
       <header className="header">
         <div className="logo">
-          <Volume2 size={20} />
-          <span>Vocalize</span>
+          <Terminal size={22} color="#00f2ff" />
+          <span>CYBER-VOCAL</span>
         </div>
         <div className="api-key-container">
           <button className="settings-btn" onClick={() => setShowSettings(!showSettings)}>
-            {showSettings ? <X size={18} /> : <Settings size={18} />}
+            {showSettings ? <X size={20} /> : <Settings size={20} />}
           </button>
           {showSettings && (
             <input
               type="password"
-              placeholder="ElevenLabs API Key"
+              placeholder="ENCRYPTED API KEY"
               value={apiKey}
               onChange={handleApiKeyChange}
               className="api-input-minimal"
@@ -102,17 +99,20 @@ function App() {
         </div>
       </header>
 
-      <textarea
-        placeholder="Type to speak..."
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        className="text-input"
-      />
+      <div className="input-group">
+        <span className="section-label">Input Terminal</span>
+        <textarea
+          placeholder="ENTER TEXT SEQUENCE..."
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          className="text-input"
+        />
+      </div>
 
       <div className="voice-section">
-        <span className="section-label">Voice Agent</span>
+        <span className="section-label">Voice Core</span>
         {isFetchingVoices ? (
-          <div className="status-text">Loading voices...</div>
+          <div className="status-text">SYNCING VOICES...</div>
         ) : (
           <select
             className="voice-select-minimal"
@@ -120,7 +120,7 @@ function App() {
             onChange={handleVoiceChange}
           >
             {voices.map(v => (
-              <option key={v.voice_id} value={v.voice_id}>{v.name}</option>
+              <option key={v.voice_id} value={v.voice_id}>{v.name.toUpperCase()}</option>
             ))}
           </select>
         )}
@@ -132,21 +132,21 @@ function App() {
           onClick={generateAudio}
           disabled={isLoading || !text}
         >
-          {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Play size={18} />}
-          {isLoading ? 'Generating...' : 'Speak'}
+          {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Play size={18} fill="currentColor" />}
+          {isLoading ? 'INITIATING...' : 'EXECUTE VOICE'}
         </button>
 
         {audioUrl && (
           <div className="audio-player-minimal">
             <audio ref={audioRef} src={audioUrl} onEnded={() => setIsPlaying(false)} onPlay={() => setIsPlaying(true)} onPause={() => setIsPlaying(false)} />
             <button className="play-btn-small" onClick={() => isPlaying ? audioRef.current.pause() : audioRef.current.play()}>
-              {isPlaying ? <Pause size={16} /> : <Play size={16} fill="currentColor" />}
+              {isPlaying ? <Pause size={20} /> : <Play size={20} fill="currentColor" />}
             </button>
-            <span className="status-text">Ready</span>
+            <span className="status-text">AUDIO READY</span>
             <button className="download-btn-small" onClick={() => {
-              const a = document.createElement('a'); a.href = audioUrl; a.download = 'voice.mp3'; a.click();
+              const a = document.createElement('a'); a.href = audioUrl; a.download = 'cyber_vocal.mp3'; a.click();
             }}>
-              <Download size={16} />
+              <Download size={20} />
             </button>
           </div>
         )}
