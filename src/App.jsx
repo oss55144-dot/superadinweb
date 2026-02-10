@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
-import { Play, Pause, Download, Volume2, Mic, Settings, Search, Loader2, AlertCircle, X, Terminal } from 'lucide-react';
+import { Play, Pause, Download, Volume2, Mic, Settings, Search, Loader2, AlertCircle, X, Terminal, Clock, LogIn, LogOut, Bell } from 'lucide-react';
 import './App.css';
 
 const DEFAULT_VOICE_ID = '6AUOG2nbfr0yFEeI0784'; // Rachel
 
 function App() {
+  // --- TTS State ---
   const [text, setText] = useState('');
   const [voices, setVoices] = useState([]);
   const [selectedVoice, setSelectedVoice] = useState(null);
@@ -16,6 +17,14 @@ function App() {
   const [audioUrl, setAudioUrl] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef(null);
+
+  // --- Clock & Tracker State ---
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [loginTime, setLoginTime] = useState(null);
+  const [dutyHours, setDutyHours] = useState(8);
+  const [logoutTime, setLogoutTime] = useState(null);
+  const [shiftAlert, setShiftAlert] = useState(false);
+  const [isShiftActive, setIsShiftActive] = useState(false);
 
   const fetchVoices = async (key) => {
     setIsFetchingVoices(true);
@@ -42,8 +51,69 @@ function App() {
     const savedKey = localStorage.getItem('elevenlabs_api_key');
     if (savedKey) setApiKey(savedKey);
     fetchVoices(savedKey || apiKey);
+
+    // Clock Interval
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
   }, []);
 
+  // --- Shift Logic ---
+  useEffect(() => {
+    if (isShiftActive && logoutTime) {
+      const timeRemaining = logoutTime - currentTime;
+      const twoMinutesInMs = 2 * 60 * 1000;
+
+      // Ring alert at 2 minutes left
+      if (timeRemaining <= twoMinutesInMs && timeRemaining > 0 && !shiftAlert) {
+        setShiftAlert(true);
+        playAlertSound();
+      }
+
+      // Auto logout if time is up
+      if (timeRemaining <= 0) {
+        setIsShiftActive(false);
+        setShiftAlert(false);
+        alert("Shift Complete. Please log out.");
+      }
+    }
+  }, [currentTime, isShiftActive, logoutTime, shiftAlert]);
+
+  const handleLogin = () => {
+    const now = new Date();
+    setLoginTime(now);
+    const logout = new Date(now.getTime() + dutyHours * 60 * 60 * 1000);
+    setLogoutTime(logout);
+    setIsShiftActive(true);
+    setShiftAlert(false);
+  };
+
+  const playAlertSound = () => {
+    const audioContent = "Attention. Two minutes remaining in your shift. Prepare for logout.";
+    // Using the free browser TTS to announce the alert
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(audioContent);
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const formatTime = (date) => {
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  };
+
+  const getRemainingTime = () => {
+    if (!logoutTime) return "00:00:00";
+    const diff = logoutTime - currentTime;
+    if (diff <= 0) return "00:00:00";
+
+    const h = Math.floor(diff / (1000 * 60 * 60));
+    const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const s = Math.floor((diff % (1000 * 60)) / 1000);
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
+  // --- TTS Logic ---
   const handleApiKeyChange = (e) => {
     const newKey = e.target.value;
     setApiKey(newKey);
@@ -81,26 +151,69 @@ function App() {
       <header className="header">
         <div className="logo">
           <Terminal size={22} color="#00f2ff" />
-          <span>CYBER-VOCAL</span>
+          <span>CYBER-VOCAL v2.0</span>
         </div>
         <div className="api-key-container">
           <button className="settings-btn" onClick={() => setShowSettings(!showSettings)}>
             {showSettings ? <X size={20} /> : <Settings size={20} />}
           </button>
           {showSettings && (
-            <input
-              type="password"
-              placeholder="ENCRYPTED API KEY"
-              value={apiKey}
-              onChange={handleApiKeyChange}
-              className="api-input-minimal"
-            />
+            <div className="settings-popup">
+              <span className="section-label">Config Node</span>
+              <input
+                type="password"
+                placeholder="ENCRYPTED API KEY"
+                value={apiKey}
+                onChange={handleApiKeyChange}
+                className="api-input-minimal"
+              />
+              <div style={{ marginTop: '1rem' }}>
+                <span className="section-label">Duty Cycle (Hours)</span>
+                <input
+                  type="number"
+                  value={dutyHours}
+                  onChange={(e) => setDutyHours(e.target.value)}
+                  className="api-input-minimal"
+                  style={{ marginTop: '5px' }}
+                />
+              </div>
+            </div>
           )}
         </div>
       </header>
 
+      {/* --- Clock & Tracker Section --- */}
+      <section className="dashboard-section">
+        <div className="clock-box">
+          <Clock size={16} color="var(--primary)" />
+          <span className="time-display">{formatTime(currentTime)}</span>
+        </div>
+        <div className={`shift-card ${isShiftActive ? 'active' : ''} ${shiftAlert ? 'alert' : ''}`}>
+          <div className="shift-info">
+            {isShiftActive ? (
+              <>
+                <div className="countdown-group">
+                  <span className="section-label">Shift Ends In:</span>
+                  <div className="countdown-value">{getRemainingTime()}</div>
+                </div>
+                <div className="shift-details">
+                  <div>Login: {formatTime(loginTime)}</div>
+                  <div>Logout: {formatTime(logoutTime)}</div>
+                </div>
+              </>
+            ) : (
+              <div className="shift-offline">SYSTEM READY FOR DUTY</div>
+            )}
+          </div>
+          <button className={`shift-btn ${isShiftActive ? 'logout' : 'login'}`} onClick={isShiftActive ? () => setIsShiftActive(false) : handleLogin}>
+            {isShiftActive ? <LogOut size={18} /> : <LogIn size={18} />}
+            {isShiftActive ? 'END SHIFT' : 'START SHIFT'}
+          </button>
+        </div>
+      </section>
+
       <div className="input-group">
-        <span className="section-label">Input Terminal</span>
+        <span className="section-label">Speech Buffer</span>
         <textarea
           placeholder="ENTER TEXT SEQUENCE..."
           value={text}
@@ -110,9 +223,9 @@ function App() {
       </div>
 
       <div className="voice-section">
-        <span className="section-label">Voice Core</span>
+        <span className="section-label">Neural Core Selection</span>
         {isFetchingVoices ? (
-          <div className="status-text">SYNCING VOICES...</div>
+          <div className="status-text pulse">SYNCING VOICES...</div>
         ) : (
           <select
             className="voice-select-minimal"
@@ -132,7 +245,7 @@ function App() {
           onClick={generateAudio}
           disabled={isLoading || !text}
         >
-          {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Play size={18} fill="currentColor" />}
+          {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Mic size={18} color="#000" />}
           {isLoading ? 'INITIATING...' : 'EXECUTE VOICE'}
         </button>
 
@@ -142,15 +255,22 @@ function App() {
             <button className="play-btn-small" onClick={() => isPlaying ? audioRef.current.pause() : audioRef.current.play()}>
               {isPlaying ? <Pause size={20} /> : <Play size={20} fill="currentColor" />}
             </button>
-            <span className="status-text">AUDIO READY</span>
+            <span className="status-text neon">BUFFER LOADED</span>
             <button className="download-btn-small" onClick={() => {
-              const a = document.createElement('a'); a.href = audioUrl; a.download = 'cyber_vocal.mp3'; a.click();
+              const a = document.createElement('a'); a.href = audioUrl; a.download = 'vocal_log.mp3'; a.click();
             }}>
               <Download size={20} />
             </button>
           </div>
         )}
       </div>
+
+      {shiftAlert && (
+        <div className="warning-banner">
+          <Bell size={18} className="shake" />
+          <span>TERMINAL WARNING: 2 MIN REMAINING</span>
+        </div>
+      )}
     </div>
   );
 }
