@@ -1,15 +1,14 @@
 :root {
-  --primary: #6366f1;
-  --primary-hover: #4f46e5;
-  --background: #f8fafc;
+  --primary: #000000;
+  --primary-hover: #333333;
+  --background: #ffffff;
   --surface: #ffffff;
-  --text: #1e293b;
-  --text-muted: #64748b;
-  --border: #e2e8f0;
-  --error: #ef4444;
-  --success: #22c55e;
-  --radius: 12px;
-  --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --text: #1a1a1a;
+  --text-muted: #737373;
+  --border: #e5e5e5;
+  --error: #dc2626;
+  --success: #16a34a;
+  --radius: 8px;
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
@@ -27,7 +26,8 @@ body {
   min-height: 100vh;
   display: flex;
   justify-content: center;
-  padding: 2rem;
+  align-items: center;
+  padding: 1rem;
 }
 
 button {
@@ -35,19 +35,22 @@ button {
   border: none;
   background: none;
   font-family: inherit;
+  transition: all 0.2s ease;
 }
 
-input, textarea, select {
+input,
+textarea,
+select {
   font-family: inherit;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 0.75rem;
   width: 100%;
   outline: none;
-  transition: border-color 0.2s;
+  background: #fdfdfd;
 }
 
-input:focus, textarea:focus {
+input:focus,
+textarea:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
 }
