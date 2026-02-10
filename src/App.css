@@ -225,6 +225,39 @@
   }
 }
 
+/* Shift Toggle & Custom Inputs */
+.toggle-btn {
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+  border: 1px solid var(--border);
+}
+
+.toggle-btn.on {
+  background: var(--primary);
+  color: black;
+  border-color: var(--primary);
+  box-shadow: 0 0 10px rgba(0, 242, 255, 0.3);
+}
+
+.toggle-btn.off {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted);
+}
+
+.input-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  cursor: pointer;
+}
+
 /* Original TTS overrides */
 .api-input-minimal {
   margin-top: 5px;

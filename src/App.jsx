@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
-import { Play, Pause, Download, Volume2, Mic, Settings, Search, Loader2, AlertCircle, X, Terminal, Clock, LogIn, LogOut, Bell } from 'lucide-react';
+import { Play, Pause, Download, Volume2, Mic, Settings, Search, Loader2, AlertCircle, X, Terminal, Clock, LogIn, LogOut, Bell, Watch } from 'lucide-react';
 import './App.css';
 
 const DEFAULT_VOICE_ID = '6AUOG2nbfr0yFEeI0784'; // Rachel
@@ -25,6 +25,8 @@ function App() {
   const [logoutTime, setLogoutTime] = useState(null);
   const [shiftAlert, setShiftAlert] = useState(false);
   const [isShiftActive, setIsShiftActive] = useState(false);
+  const [isCustomMode, setIsCustomMode] = useState(false);
+  const [customTime, setCustomTime] = useState('');
 
   const fetchVoices = async (key) => {
     setIsFetchingVoices(true);
@@ -52,7 +54,6 @@ function App() {
     if (savedKey) setApiKey(savedKey);
     fetchVoices(savedKey || apiKey);
 
-    // Clock Interval
     const timer = setInterval(() => {
       setCurrentTime(new Date());
     }, 1000);
@@ -66,13 +67,11 @@ function App() {
       const timeRemaining = logoutTime - currentTime;
       const twoMinutesInMs = 2 * 60 * 1000;
 
-      // Ring alert at 2 minutes left
       if (timeRemaining <= twoMinutesInMs && timeRemaining > 0 && !shiftAlert) {
         setShiftAlert(true);
         playAlertSound();
       }
 
-      // Auto logout if time is up
       if (timeRemaining <= 0) {
         setIsShiftActive(false);
         setShiftAlert(false);
@@ -84,7 +83,22 @@ function App() {
   const handleLogin = () => {
     const now = new Date();
     setLoginTime(now);
-    const logout = new Date(now.getTime() + dutyHours * 60 * 60 * 1000);
+
+    let logout;
+    if (isCustomMode && customTime) {
+      // Set logout to a specific time today
+      const [hours, minutes] = customTime.split(':');
+      logout = new Date();
+      logout.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+
+      // If the logout time is earlier than the login time, assume it's tomorrow
+      if (logout <= now) {
+        logout.setDate(logout.getDate() + 1);
+      }
+    } else {
+      logout = new Date(now.getTime() + dutyHours * 60 * 60 * 1000);
+    }
+
     setLogoutTime(logout);
     setIsShiftActive(true);
     setShiftAlert(false);
@@ -92,13 +106,13 @@ function App() {
 
   const playAlertSound = () => {
     const audioContent = "Attention. Two minutes remaining in your shift. Prepare for logout.";
-    // Using the free browser TTS to announce the alert
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(audioContent);
     window.speechSynthesis.speak(utterance);
   };
 
   const formatTime = (date) => {
+    if (!date) return "--:--:--";
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   };
 
@@ -151,7 +165,7 @@ function App() {
       <header className="header">
         <div className="logo">
           <Terminal size={22} color="#00f2ff" />
-          <span>CYBER-VOCAL v2.0</span>
+          <span>CYBER-VOCAL v2.1</span>
         </div>
         <div className="api-key-container">
           <button className="settings-btn" onClick={() => setShowSettings(!showSettings)}>
@@ -167,22 +181,45 @@ function App() {
                 onChange={handleApiKeyChange}
                 className="api-input-minimal"
               />
-              <div style={{ marginTop: '1rem' }}>
-                <span className="section-label">Duty Cycle (Hours)</span>
-                <input
-                  type="number"
-                  value={dutyHours}
-                  onChange={(e) => setDutyHours(e.target.value)}
-                  className="api-input-minimal"
-                  style={{ marginTop: '5px' }}
-                />
+
+              <div style={{ marginTop: '1.25rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span className="section-label">Shift Mode</span>
+                  <button
+                    className={`toggle-btn ${isCustomMode ? 'on' : 'off'}`}
+                    onClick={() => setIsCustomMode(!isCustomMode)}
+                  >
+                    {isCustomMode ? 'CUSTOM' : 'STRICT'}
+                  </button>
+                </div>
+
+                {isCustomMode ? (
+                  <div className="input-field">
+                    <span className="section-label">Logout Time</span>
+                    <input
+                      type="time"
+                      value={customTime}
+                      onChange={(e) => setCustomTime(e.target.value)}
+                      className="api-input-minimal"
+                    />
+                  </div>
+                ) : (
+                  <div className="input-field">
+                    <span className="section-label">Duty Cycle (Hours)</span>
+                    <input
+                      type="number"
+                      value={dutyHours}
+                      onChange={(e) => setDutyHours(parseFloat(e.target.value) || 0)}
+                      className="api-input-minimal"
+                    />
+                  </div>
+                )}
               </div>
             </div>
           )}
         </div>
       </header>
 
-      {/* --- Clock & Tracker Section --- */}
       <section className="dashboard-section">
         <div className="clock-box">
           <Clock size={16} color="var(--primary)" />
@@ -193,21 +230,24 @@ function App() {
             {isShiftActive ? (
               <>
                 <div className="countdown-group">
-                  <span className="section-label">Shift Ends In:</span>
+                  <span className="section-label">Shift Termination:</span>
                   <div className="countdown-value">{getRemainingTime()}</div>
                 </div>
                 <div className="shift-details">
-                  <div>Login: {formatTime(loginTime)}</div>
-                  <div>Logout: {formatTime(logoutTime)}</div>
+                  <div>IN: {formatTime(loginTime)}</div>
+                  <div>OUT: {formatTime(logoutTime)}</div>
                 </div>
               </>
             ) : (
-              <div className="shift-offline">SYSTEM READY FOR DUTY</div>
+              <div className="shift-offline">
+                <Watch size={14} style={{ marginRight: '5px', verticalAlign: 'middle' }} />
+                <span>STANDBY FOR SHIFT START</span>
+              </div>
             )}
           </div>
           <button className={`shift-btn ${isShiftActive ? 'logout' : 'login'}`} onClick={isShiftActive ? () => setIsShiftActive(false) : handleLogin}>
             {isShiftActive ? <LogOut size={18} /> : <LogIn size={18} />}
-            {isShiftActive ? 'END SHIFT' : 'START SHIFT'}
+            {isShiftActive ? 'LOGOUT' : 'LOGIN'}
           </button>
         </div>
       </section>
@@ -223,9 +263,9 @@ function App() {
       </div>
 
       <div className="voice-section">
-        <span className="section-label">Neural Core Selection</span>
+        <span className="section-label">Neural Core</span>
         {isFetchingVoices ? (
-          <div className="status-text pulse">SYNCING VOICES...</div>
+          <div className="status-text pulse">SYNCING NEURAL CORES...</div>
         ) : (
           <select
             className="voice-select-minimal"
@@ -246,7 +286,7 @@ function App() {
           disabled={isLoading || !text}
         >
           {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Mic size={18} color="#000" />}
-          {isLoading ? 'INITIATING...' : 'EXECUTE VOICE'}
+          {isLoading ? 'ENCODING...' : 'TRANSMIT VOICE'}
         </button>
 
         {audioUrl && (
@@ -255,7 +295,7 @@ function App() {
             <button className="play-btn-small" onClick={() => isPlaying ? audioRef.current.pause() : audioRef.current.play()}>
               {isPlaying ? <Pause size={20} /> : <Play size={20} fill="currentColor" />}
             </button>
-            <span className="status-text neon">BUFFER LOADED</span>
+            <span className="status-text neon">SIGNAL ACQUIRED</span>
             <button className="download-btn-small" onClick={() => {
               const a = document.createElement('a'); a.href = audioUrl; a.download = 'vocal_log.mp3'; a.click();
             }}>
@@ -268,7 +308,7 @@ function App() {
       {shiftAlert && (
         <div className="warning-banner">
           <Bell size={18} className="shake" />
-          <span>TERMINAL WARNING: 2 MIN REMAINING</span>
+          <span>LOGOUT SEQUENCE REQUIRED: 120s</span>
         </div>
       )}
     </div>
